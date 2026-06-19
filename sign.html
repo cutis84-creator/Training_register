@@ -184,7 +184,7 @@ async function loadSession(){
     return;
   }
   document.getElementById('nameList').innerHTML = '<div class="empty-hint"><span class="spinner"></span>명단을 불러오는 중이에요...</div>';
-  const res = await fetch(SCRIPT_URL + '?action=getSession&id=' + SESSION_ID);
+  const res = await fetch(SCRIPT_URL + '?action=getSession&id=' + SESSION_ID + '&_=' + Date.now(), { cache: 'no-store' });
   session = await res.json();
   if(session.error){
     document.getElementById('nameList').innerHTML = '<div class="empty-hint">'+session.error+'</div>';

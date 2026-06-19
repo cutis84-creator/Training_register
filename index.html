@@ -317,7 +317,7 @@ function showDisplay(s){
 
 async function updateCount(id, total){
   try{
-    const res = await fetch(SCRIPT_URL + '?action=getCount&id=' + id);
+    const res = await fetch(SCRIPT_URL + '?action=getCount&id=' + id + '&_=' + Date.now(), { cache: 'no-store' });
     const data = await res.json();
     if(!data.error){
       document.getElementById('countText').textContent = data.서명완료 + ' / ' + data.전체 + '명 서명 완료';
@@ -330,7 +330,7 @@ async function updateCount(id, total){
   const params = new URLSearchParams(location.search);
   const id = params.get('id');
   if(id && SCRIPT_URL.indexOf('http')===0){
-    fetch(SCRIPT_URL + '?action=getSession&id=' + id)
+    fetch(SCRIPT_URL + '?action=getSession&id=' + id + '&_=' + Date.now(), { cache: 'no-store' })
       .then(r=>r.json())
       .then(s=>{ if(!s.error) showDisplay(s); });
   }

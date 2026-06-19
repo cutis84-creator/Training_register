@@ -112,6 +112,7 @@
 
 <div class="toolbar no-print">
   <button onclick="window.print()">🖨 인쇄하기</button>
+  <button onclick="load()" style="background:#fff;color:var(--navy);border:1.5px solid var(--line);">🔄 새로고침</button>
   <span class="status" id="status">불러오는 중...</span>
 </div>
 
@@ -130,7 +131,7 @@ async function load(){
     statusEl.textContent = '등록부 정보를 불러올 수 없습니다.';
     return;
   }
-  const res = await fetch(SCRIPT_URL + '?action=getAll&id=' + SESSION_ID);
+  const res = await fetch(SCRIPT_URL + '?action=getAll&id=' + SESSION_ID + '&_=' + Date.now(), { cache: 'no-store' });
   const data = await res.json();
   if(data.error){ statusEl.textContent = data.error; return; }
 
