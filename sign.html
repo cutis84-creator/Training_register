@@ -62,6 +62,13 @@
     padding:2px 8px; border-radius:999px;
   }
   .empty-hint{ text-align:center; color:#93a3b5; font-size:13.5px; padding:18px 0; }
+  .spinner{
+    display:inline-block; width:14px; height:14px;
+    border:2px solid #c8d6e5; border-top-color:var(--blue1);
+    border-radius:50%; vertical-align:middle; margin-right:7px;
+    animation:spin .7s linear infinite;
+  }
+  @keyframes spin{ to{ transform:rotate(360deg); } }
 
   .add-btn{
     margin-top:10px; width:100%; padding:12px; text-align:center;
@@ -70,7 +77,7 @@
   }
 
   /* 명단에 없을 때 직접 입력 */
-  .manual-row{ display:grid; grid-template-columns:1fr 1.4fr; gap:10px; margin-top:4px; }
+  .manual-row{ display:grid; grid-template-columns:1fr; gap:10px; margin-top:4px; }
   .manual-row input{
     padding:12px; border:1.5px solid var(--line); border-radius:10px; font-size:15px; background:#fafcff;
   }
@@ -113,8 +120,8 @@
 <body>
 
 <div class="ribbon">
-  <div class="school" id="hSchool">학교명</div>
-  <div class="training" id="hTraining">연수명</div>
+  <div class="school" id="hSchool"></div>
+  <div class="training" id="hTraining">불러오는 중...</div>
 </div>
 
 <div class="wrap">
@@ -164,7 +171,7 @@
 </div>
 
 <script>
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw2YZSWPCtOaxq3BNdANipZDZ-vEuqulXdNNXu_91VB1opHdUfjf-6RpbOdbJ_yBWRYKA/exec';
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbx-NvPrWIZypbhjNSve_8PM_I6ymLc7GW-xSTZZidrqNBUDow6ZfvONXjmZT7NvzvvA7Q/exec';
 const params = new URLSearchParams(location.search);
 const SESSION_ID = params.get('id');
 
@@ -176,6 +183,7 @@ async function loadSession(){
     document.getElementById('nameList').innerHTML = '<div class="empty-hint">등록부 정보를 불러올 수 없습니다.<br>QR코드를 다시 스캔해 주세요.</div>';
     return;
   }
+  document.getElementById('nameList').innerHTML = '<div class="empty-hint"><span class="spinner"></span>명단을 불러오는 중이에요...</div>';
   const res = await fetch(SCRIPT_URL + '?action=getSession&id=' + SESSION_ID);
   session = await res.json();
   if(session.error){

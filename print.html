@@ -65,6 +65,12 @@
   .cols{
     display:grid; grid-template-columns:1fr 1fr; gap:10px;
   }
+  .cols.cols-1{
+    grid-template-columns:1fr;
+  }
+  .cols-1 table{ font-size:13px; }
+  .cols-1 .sigcell{ height:38px; }
+  .cols-1 .sigcell img{ height:32px; }
   table{
     width:100%; border-collapse:collapse; font-size:11.5px;
   }
@@ -93,6 +99,12 @@
     .toolbar{ display:none; }
     .page{ box-shadow:none; margin:0; width:auto; min-height:auto; }
     @page{ size:A4; margin:10mm; }
+    /* 브라우저 기본 설정과 무관하게 배경색(헤더 그라데이션, 표 헤더색 등)이 인쇄되도록 강제 */
+    *{
+      -webkit-print-color-adjust:exact !important;
+      print-color-adjust:exact !important;
+      color-adjust:exact !important;
+    }
   }
 </style>
 </head>
@@ -106,7 +118,7 @@
 <div id="pages"></div>
 
 <script>
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw2YZSWPCtOaxq3BNdANipZDZ-vEuqulXdNNXu_91VB1opHdUfjf-6RpbOdbJ_yBWRYKA/exec';
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbx-NvPrWIZypbhjNSve_8PM_I6ymLc7GW-xSTZZidrqNBUDow6ZfvONXjmZT7NvzvvA7Q/exec';
 const params = new URLSearchParams(location.search);
 const SESSION_ID = params.get('id');
 
@@ -128,15 +140,29 @@ async function load(){
 
 function render(data){
   const list = data.명단;
-  const perPage = ROWS_PER_COLUMN * 2;
-  const pageCount = Math.max(1, Math.ceil(list.length / perPage));
   const pagesEl = document.getElementById('pages');
   pagesEl.innerHTML = '';
 
+  if(list.length === 0){
+    pagesEl.innerHTML = '<div class="page"><div class="empty-note">아직 서명한 사람이 없습니다.</div></div>';
+    return;
+  }
+
+  const singleColumn = list.length <= 25; // 25명 이하면 1열, 초과하면 2열
+  const perPage = singleColumn ? list.length : ROWS_PER_COLUMN * 2;
+  const pageCount = Math.max(1, Math.ceil(list.length / perPage));
+
   for(let p=0; p<pageCount; p++){
     const pageList = list.slice(p*perPage, (p+1)*perPage);
-    const col1 = pageList.slice(0, ROWS_PER_COLUMN);
-    const col2 = pageList.slice(ROWS_PER_COLUMN);
+
+    let colsHtml;
+    if(singleColumn){
+      colsHtml = `<div class="cols cols-1">${buildTable(pageList, p*perPage)}</div>`;
+    }else{
+      const col1 = pageList.slice(0, ROWS_PER_COLUMN);
+      const col2 = pageList.slice(ROWS_PER_COLUMN);
+      colsHtml = `<div class="cols">${buildTable(col1, p*perPage)}${buildTable(col2, p*perPage + ROWS_PER_COLUMN)}</div>`;
+    }
 
     const page = document.createElement('div');
     page.className = 'page';
@@ -151,16 +177,9 @@ function render(data){
         ${data.대상?`<div><b>대&nbsp;&nbsp;상</b> ${escapeHtml(data.대상)}</div>`:''}
         ${data.주제?`<div><b>주&nbsp;&nbsp;제</b> ${escapeHtml(data.주제)}</div>`:''}
       </div>
-      <div class="cols">
-        ${buildTable(col1, p*perPage)}
-        ${buildTable(col2, p*perPage + ROWS_PER_COLUMN)}
-      </div>
+      ${colsHtml}
     `;
     pagesEl.appendChild(page);
-  }
-
-  if(list.length===0){
-    pagesEl.innerHTML = '<div class="page"><div class="empty-note">아직 서명한 사람이 없습니다.</div></div>';
   }
 }
 
