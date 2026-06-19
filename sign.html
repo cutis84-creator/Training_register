@@ -166,6 +166,7 @@
     <div class="mark">✅</div>
     <h2>서명이 완료되었습니다</h2>
     <p id="doneWho"></p>
+    <button class="submit-btn" style="margin-top:24px;" onclick="signAnother()">＋ 다른 사람 서명하기</button>
   </div>
 
 </div>
@@ -319,6 +320,29 @@ async function submitSign(){
     errEl.classList.remove('hidden');
     btn.disabled = false; btn.textContent = '서명 제출';
   }
+}
+
+async function signAnother(){
+  selected = null;
+  hasDrawn = false;
+  document.getElementById('searchBox').value = '';
+  document.getElementById('manualClass').value = '';
+  document.getElementById('manualName').value = '';
+  toggleManual(false);
+
+  document.getElementById('stepDone').classList.add('hidden');
+  document.getElementById('step1').classList.remove('hidden');
+
+  const btn = document.getElementById('submitBtn');
+  btn.disabled = false; btn.textContent = '서명 제출';
+  document.getElementById('submitErr').classList.add('hidden');
+
+  // 방금 서명한 사람이 "서명완료"로 바로 표시되도록 최신 현황을 다시 불러옴
+  document.getElementById('nameList').innerHTML = '<div class="empty-hint"><span class="spinner"></span>명단을 불러오는 중이에요...</div>';
+  const res = await fetch(SCRIPT_URL + '?action=getSession&id=' + SESSION_ID + '&_=' + Date.now(), { cache: 'no-store' });
+  const fresh = await res.json();
+  if(!fresh.error){ session = fresh; }
+  renderList('');
 }
 
 loadSession();
