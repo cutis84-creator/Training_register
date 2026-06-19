@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>연수 등록부 - 인쇄용</title>
+<style>
+  :root{
+    --navy:#0d3b66;
+    --blue1:#1e6fd9;
+    --blue2:#5aa9f7;
+    --line:#9fb6cc;
+    --headbg:#dceaf9;
+  }
+  *{ box-sizing:border-box; }
+  body{
+    margin:0;
+    font-family:"Pretendard","Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+    color:var(--navy);
+    background:#e9eef4;
+  }
+  .toolbar{
+    position:sticky; top:0; z-index:10;
+    background:#fff; border-bottom:1px solid #d7e2ee;
+    padding:12px 18px; display:flex; gap:10px; align-items:center; justify-content:center;
+  }
+  .toolbar button{
+    padding:10px 18px; border-radius:10px; border:none; cursor:pointer;
+    background:linear-gradient(135deg,var(--blue1),var(--navy)); color:#fff; font-weight:700; font-size:14px;
+  }
+  .toolbar .status{ font-size:13px; color:#5b7187; }
+
+  .page{
+    width:210mm;
+    min-height:297mm;
+    margin:18px auto;
+    background:#fff;
+    box-shadow:0 6px 22px rgba(13,59,102,.15);
+    padding:14mm;
+    page-break-after:always;
+  }
+  .page:last-child{ page-break-after:auto; }
+
+  .ribbon{
+    background:linear-gradient(100deg,var(--blue2),var(--blue1) 55%,var(--navy));
+    color:#fff;
+    border-radius:10px;
+    padding:14px 18px 16px;
+    text-align:center;
+    margin-bottom:6px;
+  }
+  .ribbon .school{ font-size:13px; opacity:.9; letter-spacing:1px; }
+  .ribbon .title{ font-size:26px; font-weight:800; letter-spacing:10px; margin-top:2px; }
+
+  .meta{
+    border:1px solid var(--line); border-top:none;
+    border-radius:0 0 10px 10px;
+    padding:10px 16px;
+    font-size:12.5px;
+    display:flex; flex-direction:column; gap:4px;
+    margin-bottom:14px;
+  }
+  .meta b{ display:inline-block; width:46px; color:var(--navy); }
+
+  .cols{
+    display:grid; grid-template-columns:1fr 1fr; gap:10px;
+  }
+  table{
+    width:100%; border-collapse:collapse; font-size:11.5px;
+  }
+  th, td{
+    border:1px solid var(--line);
+    padding:3px 4px;
+    text-align:center;
+  }
+  th{
+    background:var(--headbg);
+    font-weight:700;
+  }
+  td.name{ font-weight:600; }
+  .sigcell{ height:30px; }
+  .sigcell img{ height:26px; max-width:100%; object-fit:contain; }
+  .col-no{ width:24px; }
+  .col-cls{ width:54px; }
+  .col-name{ width:60px; }
+
+  .empty-note{
+    text-align:center; color:#93a3b5; padding:40px; font-size:14px;
+  }
+
+  @media print{
+    body{ background:#fff; }
+    .toolbar{ display:none; }
+    .page{ box-shadow:none; margin:0; width:auto; min-height:auto; }
+    @page{ size:A4; margin:10mm; }
+  }
+</style>
+</head>
+<body>
+
+<div class="toolbar no-print">
+  <button onclick="window.print()">🖨 인쇄하기</button>
+  <span class="status" id="status">불러오는 중...</span>
+</div>
+
+<div id="pages"></div>
+
+<script>
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw2YZSWPCtOaxq3BNdANipZDZ-vEuqulXdNNXu_91VB1opHdUfjf-6RpbOdbJ_yBWRYKA/exec';
+const params = new URLSearchParams(location.search);
+const SESSION_ID = params.get('id');
+
+const ROWS_PER_COLUMN = 30; // 한 단에 들어갈 최대 인원 (필요시 조절)
+
+async function load(){
+  const statusEl = document.getElementById('status');
+  if(!SESSION_ID || SCRIPT_URL.indexOf('http')!==0){
+    statusEl.textContent = '등록부 정보를 불러올 수 없습니다.';
+    return;
+  }
+  const res = await fetch(SCRIPT_URL + '?action=getAll&id=' + SESSION_ID);
+  const data = await res.json();
+  if(data.error){ statusEl.textContent = data.error; return; }
+
+  statusEl.textContent = data.명단.length + '명 · 인쇄 미리보기 준비 완료';
+  render(data);
+}
+
+function render(data){
+  const list = data.명단;
+  const perPage = ROWS_PER_COLUMN * 2;
+  const pageCount = Math.max(1, Math.ceil(list.length / perPage));
+  const pagesEl = document.getElementById('pages');
+  pagesEl.innerHTML = '';
+
+  for(let p=0; p<pageCount; p++){
+    const pageList = list.slice(p*perPage, (p+1)*perPage);
+    const col1 = pageList.slice(0, ROWS_PER_COLUMN);
+    const col2 = pageList.slice(ROWS_PER_COLUMN);
+
+    const page = document.createElement('div');
+    page.className = 'page';
+    page.innerHTML = `
+      <div class="ribbon">
+        <div class="school">${escapeHtml(data.학교명||'')}</div>
+        <div class="title">등 록 부</div>
+      </div>
+      <div class="meta">
+        <div><b>연수명</b> ${escapeHtml(data.연수명||'')}</div>
+        ${data.일시?`<div><b>일&nbsp;&nbsp;시</b> ${escapeHtml(data.일시)}</div>`:''}
+        ${data.대상?`<div><b>대&nbsp;&nbsp;상</b> ${escapeHtml(data.대상)}</div>`:''}
+        ${data.주제?`<div><b>주&nbsp;&nbsp;제</b> ${escapeHtml(data.주제)}</div>`:''}
+      </div>
+      <div class="cols">
+        ${buildTable(col1, p*perPage)}
+        ${buildTable(col2, p*perPage + ROWS_PER_COLUMN)}
+      </div>
+    `;
+    pagesEl.appendChild(page);
+  }
+
+  if(list.length===0){
+    pagesEl.innerHTML = '<div class="page"><div class="empty-note">아직 서명한 사람이 없습니다.</div></div>';
+  }
+}
+
+function buildTable(rows, startIndex){
+  let body = '';
+  for(let i=0;i<rows.length;i++){
+    const r = rows[i];
+    body += `<tr>
+      <td>${startIndex+i+1}</td>
+      <td>${escapeHtml(r.학반||'')}</td>
+      <td class="name">${escapeHtml(r.이름||'')}</td>
+      <td class="sigcell">${r.서명URL?`<img src="${r.서명URL}">`:''}</td>
+    </tr>`;
+  }
+  return `<table>
+    <thead><tr>
+      <th class="col-no">순</th><th class="col-cls">학반</th><th class="col-name">이름</th><th>서명</th>
+    </tr></thead>
+    <tbody>${body}</tbody>
+  </table>`;
+}
+
+function escapeHtml(s){
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+load();
+</script>
+</body>
+</html>
