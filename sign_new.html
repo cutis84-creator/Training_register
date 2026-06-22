@@ -200,6 +200,7 @@ let session = null;
 let selected = null; // {학반, 이름, 추가여부}
 let signedKeys = new Set();
 let currentKeyword = '';
+let rosterless = false; // 명단 없는 연수 여부
 
 function escapeHtml(s){
   return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -228,6 +229,15 @@ async function loadSession(){
   document.getElementById('hTraining').textContent = session.연수명 || '';
   if(session.상태 === '마감'){
     document.getElementById('closedNotice').style.display = 'block';
+  }
+  // 명단이 없으면 검색창 숨기고 직접 입력 폼 바로 열기
+  if(!session.명단 || session.명단.length === 0){
+    rosterless = true;
+    document.querySelector('#step1 .step-title').textContent = '① 이름과 소속을 입력해 주세요';
+    document.getElementById('searchBox').style.display = 'none';
+    document.getElementById('nameList').style.display = 'none';
+    document.getElementById('showManualBtn').style.display = 'none';
+    toggleManual(true);
   }
 
   // 서명 현황을 실시간 구독 — 누군가 서명을 마치는 즉시 이 화면에도 "서명완료" 표시가 반영됨
@@ -389,7 +399,6 @@ function signAnother(){
   currentKeyword = '';
   document.getElementById('manualClass').value = '';
   document.getElementById('manualName').value = '';
-  toggleManual(false);
 
   document.getElementById('stepDone').classList.add('hidden');
   document.getElementById('step1').classList.remove('hidden');
@@ -398,8 +407,13 @@ function signAnother(){
   btn.disabled = false; btn.textContent = '서명 제출';
   document.getElementById('submitErr').classList.add('hidden');
 
-  // 실시간 구독 덕분에 방금 한 서명도 이미 signedKeys에 반영되어 있음 — 그냥 다시 그리기만 하면 됨
-  renderList('');
+  if(rosterless){
+    // 명단 없는 연수: 직접 입력 폼 바로 표시
+    toggleManual(true);
+  } else {
+    toggleManual(false);
+    renderList('');
+  }
 }
 
 loadSession();
