@@ -364,7 +364,11 @@ async function showDetail(id){
   // 실시간 서명 구독
   if(detailUnsub) detailUnsub();
   detailUnsub = onSnapshot(collection(db,'sessions',id,'signatures'), sigSnap=>{
-    document.getElementById('countText').textContent = sigSnap.size+' / '+detailTotal+'명 서명 완료';
+    // 명단외 추가 서명자도 전체 인원에 포함
+    let extraCount = 0;
+    sigSnap.forEach(d=>{ if(d.data().추가여부) extraCount++; });
+    const displayTotal = detailTotal + extraCount;
+    document.getElementById('countText').textContent = sigSnap.size+' / '+displayTotal+'명 서명 완료';
     renderSigList(sigSnap, id);
   });
 
