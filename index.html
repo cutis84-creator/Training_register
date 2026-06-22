@@ -80,7 +80,7 @@
   /* 좌우 분할 메인 */
   .detail-main{
     flex:1; display:grid; grid-template-columns:1fr 1fr;
-    align-items:center; gap:60px;
+    align-items:center; align-content:center; gap:60px;
     padding:20px 80px 60px; max-width:1200px; margin:0 auto; width:100%;
   }
 
@@ -204,11 +204,12 @@
     </div>
     <label>주제 (선택)</label>
     <input type="text" id="f_topic" placeholder="예: 교권보호 및 학생생활지도">
-    <label>참가자 명단 *</label>
+    <label>참가자 명단 (선택)</label>
     <textarea id="f_roster" placeholder="학반,이름 형식 (엑셀 두 칸 복사 붙여넣기 가능)
 예)
 교장,김00
-1-1,박00"></textarea>
+1-1,박00
+※ 비워두면 참가자가 직접 이름을 입력해 서명합니다"></textarea>
     <div class="hint">
       한 줄에 한 명 · 학반,이름 또는 탭으로 구분<br>
       ※ 이미 서명한 사람을 명단에서 제거해도 서명 기록은 유지됩니다
@@ -526,7 +527,6 @@ async function saveSession(){
   const 주제=document.getElementById('f_topic').value.trim();
   const 명단=parseRoster(document.getElementById('f_roster').value);
   if(!연수명){ errEl.textContent='연수명은 꼭 입력해 주세요.'; errEl.style.display='block'; return; }
-  if(!명단.length){ errEl.textContent='참가자 명단을 입력해 주세요.'; errEl.style.display='block'; return; }
   const btn=document.getElementById('btnSave');
   btn.disabled=true; btn.textContent='저장 중...';
   try{
