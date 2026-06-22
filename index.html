@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>연수 등록부 관리</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+  :root{ --navy:#0d3b66; --blue1:#1e6fd9; --blue2:#5aa9f7; --bg:#eef3f9; --line:#d7e2ee; }
+  *{ box-sizing:border-box; margin:0; padding:0; }
+  body{ font-family:"Pretendard","Apple SD Gothic Neo","Malgun Gothic",sans-serif; background:var(--bg); color:var(--navy); min-height:100vh; }
+
+  /* ===== 공통 버튼 ===== */
+  .btn-primary{ padding:12px 20px; border:none; border-radius:10px; background:linear-gradient(135deg,var(--blue1),var(--navy)); color:#fff; font-size:15px; font-weight:700; cursor:pointer; }
+  .btn-primary:hover{ opacity:.9; }
+  .btn-primary:disabled{ opacity:.5; cursor:not-allowed; }
+  .btn-full{ width:100%; padding:15px; font-size:16px; margin-top:8px; }
+  .btn-back{ background:none; border:none; color:var(--blue1); font-size:14px; cursor:pointer; padding:4px 0; font-weight:600; }
+  .btn-sm{ padding:6px 12px; border-radius:8px; font-size:13px; cursor:pointer; font-weight:600; border:1.5px solid var(--line); background:#fff; color:#3a5a7a; }
+  .btn-sm:hover{ background:var(--bg); }
+  .btn-outline{ border:1.5px solid var(--line); background:#fff; color:#3a5a7a; }
+  .btn-danger{ border-color:#e5b0b0; color:#c0392b; }
+  .btn-danger:hover{ background:#fdf0f0; }
+  .btn-blue{ background:linear-gradient(135deg,var(--blue1),var(--navy)); color:#fff; border-color:transparent; }
+  .btn-blue:hover{ opacity:.9; }
+  .err{ color:#d23; font-size:13px; margin-top:10px; display:none; }
+
+  /* ===== 뷰1: 대시보드 ===== */
+  #viewDashboard{ max-width:860px; margin:0 auto; padding:28px 20px; }
+  .dash-header{ display:flex; justify-content:space-between; align-items:center; margin-bottom:24px; flex-wrap:wrap; gap:12px; }
+  .dash-title{ font-size:22px; font-weight:800; }
+  .card-grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(340px,1fr)); gap:16px; }
+  .loading-note, .empty-note{ text-align:center; color:#93a3b5; padding:48px 20px; font-size:15px; line-height:1.8; }
+
+  /* 연수 카드 */
+  .session-card{ background:#fff; border-radius:16px; padding:20px; box-shadow:0 4px 16px rgba(13,59,102,.08); border-left:4px solid var(--blue1); display:flex; flex-direction:column; gap:10px; }
+  .session-card.closed{ border-left-color:#aaa; }
+  .card-top{ display:flex; justify-content:space-between; align-items:flex-start; gap:8px; }
+  .status-badge{ font-size:12px; font-weight:700; padding:3px 10px; border-radius:999px; white-space:nowrap; }
+  .badge-open{ background:#d4f5e2; color:#1a7a45; }
+  .badge-closed{ background:#e8e8e8; color:#666; }
+  .card-actions{ display:flex; gap:6px; flex-wrap:wrap; justify-content:flex-end; }
+  .card-title{ font-size:16px; font-weight:700; line-height:1.3; }
+  .card-meta{ font-size:13px; color:#5b7187; display:flex; flex-wrap:wrap; gap:10px; }
+  .card-count{ font-size:14px; font-weight:600; color:var(--navy); }
+  .card-footer{ display:flex; gap:8px; align-items:center; margin-top:4px; }
+  .btn-card-main{ flex:1; padding:10px; border-radius:10px; font-size:14px; font-weight:700; cursor:pointer; border:none; background:#eef3f9; color:var(--navy); }
+
+  /* ===== 뷰2: 폼 ===== */
+  #viewForm{ display:flex; align-items:flex-start; justify-content:center; padding:28px 20px; }
+  .form-card{ background:#fff; border-radius:18px; box-shadow:0 10px 30px rgba(13,59,102,.12); padding:32px 36px; width:100%; max-width:560px; }
+  .form-nav{ display:flex; align-items:center; gap:14px; margin-bottom:20px; }
+  .form-card-title{ font-size:20px; font-weight:800; }
+  label{ display:block; font-size:13px; font-weight:600; color:#3a5a7a; margin:16px 0 6px; }
+  input[type=text], textarea{ width:100%; padding:11px 13px; border:1.5px solid var(--line); border-radius:10px; font-size:15px; font-family:inherit; background:#fafcff; }
+  input[type=text]:focus, textarea:focus{ outline:none; border-color:var(--blue1); background:#fff; }
+  textarea{ resize:vertical; min-height:130px; line-height:1.5; }
+  .hint{ font-size:12px; color:#8a9bb0; margin-top:4px; line-height:1.6; }
+  .row2{ display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+
+  /* ===== 뷰3: 상세 ===== */
+  #viewDetail{ display:flex; align-items:flex-start; justify-content:center; padding:20px; }
+  .detail-wrap{ width:100%; max-width:860px; }
+  .detail-nav{ display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; flex-wrap:wrap; gap:10px; }
+  .detail-nav-right{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+  .ribbon{ background:linear-gradient(100deg,var(--blue2),var(--blue1) 55%,var(--navy)); color:#fff; border-radius:18px 18px 0 0; padding:20px 30px 24px; text-align:center; }
+  .ribbon .school{ font-size:14px; opacity:.85; margin-bottom:4px; }
+  .ribbon .title{ font-size:28px; font-weight:800; letter-spacing:2px; }
+  .display-body{ background:#fff; border-radius:0 0 18px 18px; box-shadow:0 16px 40px rgba(13,59,102,.15); padding:28px 32px; }
+  .d-training-name{ font-size:19px; font-weight:700; text-align:center; margin-bottom:10px; }
+  .meta{ display:flex; justify-content:center; gap:24px; flex-wrap:wrap; color:#3a5a7a; font-size:14px; margin-bottom:22px; }
+  #qrcode{ display:inline-block; padding:16px; background:#fff; border:1.5px solid var(--line); border-radius:16px; }
+  .qr-wrap{ text-align:center; }
+  .scan-hint{ margin-top:12px; font-size:14px; color:#3a5a7a; text-align:center; }
+  .counter{ margin-top:18px; display:inline-flex; align-items:center; gap:10px; background:var(--bg); border-radius:999px; padding:9px 20px; font-size:15px; font-weight:700; }
+  .counter-wrap{ text-align:center; }
+  .counter .dot{ width:9px; height:9px; border-radius:50%; background:#2ecc71; animation:pulse 1.4s infinite; }
+  @keyframes pulse{ 0%{opacity:1;}50%{opacity:.3;}100%{opacity:1;} }
+  .links{ margin-top:18px; display:flex; justify-content:center; gap:12px; flex-wrap:wrap; }
+  .links a{ font-size:13px; color:#3a5a7a; text-decoration:none; border:1.5px solid var(--line); padding:7px 14px; border-radius:999px; }
+  .links a:hover{ background:var(--bg); }
+
+  /* 서명 관리 패널 */
+  .sig-panel{ margin-top:22px; border-top:1.5px solid var(--line); padding-top:14px; }
+  .sig-panel-hd{ display:flex; justify-content:space-between; align-items:center; font-size:14px; font-weight:700; color:#3a5a7a; cursor:pointer; user-select:none; padding:4px 0; }
+  .sig-manage-item{ display:flex; justify-content:space-between; align-items:center; padding:8px 12px; border-radius:8px; background:#f6f9fc; margin-bottom:6px; font-size:14px; }
+  .si-info{ color:var(--navy); }
+  .si-info small{ color:#7d8fa3; font-size:12px; margin-left:4px; }
+  .si-added{ color:#e67e22; font-size:11px; margin-left:4px; }
+  .del-btn{ border:1.5px solid #e5b0b0; background:#fff; color:#c0392b; border-radius:8px; padding:4px 10px; font-size:12px; cursor:pointer; flex-shrink:0; }
+  .del-btn:hover{ background:#fdf0f0; }
+  .sig-empty{ text-align:center; color:#93a3b5; font-size:13px; padding:14px 0; }
+</style>
+</head>
+<body>
+
+<!-- ===== 뷰1: 대시보드 ===== -->
+<div id="viewDashboard">
+  <div class="dash-header">
+    <h1 class="dash-title">📋 연수 등록부 관리</h1>
+    <button class="btn-primary" id="btnNewSession">＋ 새 연수 만들기</button>
+  </div>
+  <div id="cardGrid" class="card-grid"></div>
+  <div id="dashEmpty" class="empty-note" style="display:none">
+    등록된 연수가 없습니다.<br>위 버튼으로 첫 연수를 만들어보세요.
+  </div>
+</div>
+
+<!-- ===== 뷰2: 생성/수정 폼 ===== -->
+<div id="viewForm" style="display:none">
+  <div class="form-card">
+    <div class="form-nav">
+      <button class="btn-back" id="btnBackForm">← 목록으로</button>
+      <h2 class="form-card-title" id="formTitle">새 연수 만들기</h2>
+    </div>
+    <label>학교명</label>
+    <input type="text" id="f_school" placeholder="예: 포항해맞이초등학교">
+    <label>연수명 *</label>
+    <input type="text" id="f_training" placeholder="예: 2026학년도 교육활동 보호 연수">
+    <div class="row2">
+      <div><label>일시</label><input type="text" id="f_date" placeholder="예: 6.20.(금) 14:00~"></div>
+      <div><label>대상</label><input type="text" id="f_target" placeholder="예: 본교 교원"></div>
+    </div>
+    <label>주제 (선택)</label>
+    <input type="text" id="f_topic" placeholder="예: 교권보호 및 학생생활지도">
+    <label>참가자 명단 *</label>
+    <textarea id="f_roster" placeholder="학반,이름 형식 (엑셀 두 칸 복사 붙여넣기 가능)
+예)
+교장,김00
+1-1,박00"></textarea>
+    <div class="hint">
+      한 줄에 한 명 · 학반,이름 또는 탭으로 구분<br>
+      ※ 이미 서명한 사람을 명단에서 제거해도 서명 기록은 유지됩니다
+    </div>
+    <div class="err" id="formErr"></div>
+    <button class="btn-primary btn-full" id="btnSave">저장하기</button>
+  </div>
+</div>
+
+<!-- ===== 뷰3: 상세 (QR + 서명관리) ===== -->
+<div id="viewDetail" style="display:none">
+  <div class="detail-wrap">
+    <div class="detail-nav">
+      <button class="btn-back" id="btnBackDetail">← 목록으로</button>
+      <div class="detail-nav-right">
+        <button class="btn-sm btn-outline" id="btnEditFromDetail">✏️ 수정</button>
+        <button class="btn-sm" id="btnToggleClose">🔒 마감</button>
+      </div>
+    </div>
+    <div class="ribbon">
+      <div class="school" id="dSchool"></div>
+      <div class="title">등 록 부</div>
+    </div>
+    <div class="display-body">
+      <div class="d-training-name" id="dTrainingName"></div>
+      <div class="meta">
+        <span id="dDateTime"></span>
+        <span id="dTarget"></span>
+      </div>
+      <div class="qr-wrap">
+        <div id="qrcode"></div>
+        <div class="scan-hint">핸드폰 카메라로 QR코드를 스캔해 서명해 주세요</div>
+        <div class="counter-wrap">
+          <div class="counter"><span class="dot"></span><span id="countText">0 / 0명 서명 완료</span></div>
+        </div>
+      </div>
+      <div class="links">
+        <a id="printLink" href="#" target="_blank">🖨 인쇄용 화면 열기</a>
+      </div>
+      <div class="sig-panel">
+        <div class="sig-panel-hd" id="sigPanelToggle">
+          📋 서명 목록 관리 (잘못된 서명 삭제)
+          <span id="sigPanelArrow">▼</span>
+        </div>
+        <div id="sigPanelBody" style="display:none">
+          <div id="sigManageList" style="margin-top:12px"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-app.js";
+import {
+  getFirestore, doc, setDoc, getDoc, getDocs, updateDoc, deleteDoc,
+  collection, query, orderBy, onSnapshot, serverTimestamp, writeBatch,
+  getCountFromServer
+} from "https://www.gstatic.com/firebasejs/12.11.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyAv8dMh5Gw9Ykm70gMs-zLeKw6fyVe2wG8",
+  authDomain: "training-register-9d2d9.firebaseapp.com",
+  projectId: "training-register-9d2d9",
+  storageBucket: "training-register-9d2d9.firebasestorage.app",
+  messagingSenderId: "463058562917",
+  appId: "1:463058562917:web:0915d20876b504dc037b8c"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+let editingId = null;       // null=신규, string=수정
+let detailId = null;
+let detailTotal = 0;
+let detailUnsub = null;
+
+/* ──────────────────── 유틸 ──────────────────── */
+function escapeHtml(s){
+  return String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function parseRoster(text){
+  return text.split('\n').map(l=>l.trim()).filter(Boolean).map(line=>{
+    const p = line.includes('\t') ? line.split('\t') : line.split(',');
+    return { 학반:(p[0]||'').trim(), 이름:(p[1]||'').trim() };
+  }).filter(p=>p.이름);
+}
+function rosterToText(명단){
+  return (명단||[]).map(p=>(p.학반||'')+','+(p.이름||'')).join('\n');
+}
+
+/* ──────────────────── 뷰 전환 ──────────────────── */
+function showView(name){
+  ['Dashboard','Form','Detail'].forEach(v=>{
+    document.getElementById('view'+v).style.display = (v===name)?'block':'none';
+  });
+  if(name !== 'Detail' && detailUnsub){ detailUnsub(); detailUnsub=null; }
+  if(name !== 'Detail') history.replaceState(null,'',location.pathname);
+}
+
+/* ──────────────────── 대시보드 ──────────────────── */
+async function showDashboard(){
+  showView('Dashboard');
+  document.getElementById('cardGrid').innerHTML = '<div class="loading-note">불러오는 중...</div>';
+  document.getElementById('dashEmpty').style.display = 'none';
+
+  try{
+    const snap = await getDocs(query(collection(db,'sessions'), orderBy('생성시각','desc')));
+    if(snap.empty){
+      document.getElementById('cardGrid').innerHTML = '';
+      document.getElementById('dashEmpty').style.display = 'block';
+      return;
+    }
+
+    const sessions = [];
+    snap.forEach(d => sessions.push({ id:d.id, ...d.data() }));
+
+    // 서명 수 병렬 조회
+    const counts = await Promise.all(
+      sessions.map(s => getCountFromServer(collection(db,'sessions',s.id,'signatures'))
+        .then(c => c.data().count).catch(()=>'-'))
+    );
+
+    document.getElementById('cardGrid').innerHTML =
+      sessions.map((s,i) => renderCard(s, counts[i])).join('');
+    bindCardEvents();
+  }catch(e){
+    document.getElementById('cardGrid').innerHTML =
+      `<div class="loading-note">오류: ${escapeHtml(e.message)}</div>`;
+  }
+}
+
+function renderCard(s, cnt){
+  const closed = s.상태==='마감';
+  const total = (s.명단||[]).length;
+  return `
+  <div class="session-card ${closed?'closed':''}" data-id="${s.id}">
+    <div class="card-top">
+      <span class="status-badge ${closed?'badge-closed':'badge-open'}">${closed?'⬛ 마감':'🟢 진행중'}</span>
+      <div class="card-actions">
+        <button class="btn-sm btn-outline" data-action="edit" data-id="${s.id}">✏️ 수정</button>
+        ${closed
+          ?`<button class="btn-sm btn-outline" data-action="reopen" data-id="${s.id}">🔓 재개</button>
+            <button class="btn-sm btn-danger" data-action="delete" data-id="${s.id}">🗑 삭제</button>`
+          :`<button class="btn-sm btn-outline" data-action="close" data-id="${s.id}">🔒 마감</button>`
+        }
+      </div>
+    </div>
+    <div class="card-title">${escapeHtml(s.연수명||'')}</div>
+    <div class="card-meta">
+      ${s.일시?`<span>🕒 ${escapeHtml(s.일시)}</span>`:''}
+      ${s.대상?`<span>👥 ${escapeHtml(s.대상)}</span>`:''}
+    </div>
+    <div class="card-count">✍️ ${cnt}명 / ${total}명 서명</div>
+    <div class="card-footer">
+      <button class="btn-card-main ${closed?'':'btn-blue'}" data-action="detail" data-id="${s.id}">
+        ${closed?'📄 현황 보기':'📱 QR 화면 열기'}
+      </button>
+      <a class="btn-sm btn-outline" href="print_new.html?id=${s.id}" target="_blank">🖨 인쇄</a>
+    </div>
+  </div>`;
+}
+
+function bindCardEvents(){
+  document.querySelectorAll('[data-action]').forEach(el=>{
+    el.addEventListener('click', e=>{
+      e.stopPropagation();
+      const { action, id } = el.dataset;
+      if(action==='detail') showDetail(id);
+      else if(action==='edit')   showFormEdit(id);
+      else if(action==='close')  doClose(id, el);
+      else if(action==='reopen') doReopen(id, el);
+      else if(action==='delete') doDelete(id, el);
+    });
+  });
+}
+
+/* ──────────────────── 마감 / 재개 / 삭제 ──────────────────── */
+async function doClose(id, btn){
+  if(!confirm('이 연수를 마감할까요?\n참가자들은 마감 이후에도 서명할 수 있습니다.')) return;
+  btn.disabled=true;
+  try{ await updateDoc(doc(db,'sessions',id),{상태:'마감'}); showDashboard(); }
+  catch(e){ alert('오류: '+e.message); btn.disabled=false; }
+}
+async function doReopen(id, btn){
+  btn.disabled=true;
+  try{ await updateDoc(doc(db,'sessions',id),{상태:'진행중'}); showDashboard(); }
+  catch(e){ alert('오류: '+e.message); btn.disabled=false; }
+}
+async function doDelete(id, btn){
+  if(!confirm('이 연수와 모든 서명 기록을 삭제할까요?\n삭제 후 복구할 수 없습니다.')) return;
+  btn.disabled=true; btn.textContent='삭제 중...';
+  try{
+    const sigSnap = await getDocs(collection(db,'sessions',id,'signatures'));
+    const batch = writeBatch(db);
+    sigSnap.forEach(d => batch.delete(d.ref));
+    batch.delete(doc(db,'sessions',id));
+    await batch.commit();
+    showDashboard();
+  }catch(e){ alert('삭제 오류: '+e.message); btn.disabled=false; btn.textContent='🗑 삭제'; }
+}
+
+/* ──────────────────── 상세 뷰 ──────────────────── */
+async function showDetail(id){
+  showView('Detail');
+  history.replaceState(null,'','?id='+id);
+  detailId = id;
+
+  const snap = await getDoc(doc(db,'sessions',id));
+  if(!snap.exists()){ showDashboard(); return; }
+  const s = snap.data();
+  detailTotal = (s.명단||[]).length;
+
+  // 마감 토글 버튼 상태
+  const tb = document.getElementById('btnToggleClose');
+  if(s.상태==='마감'){
+    tb.textContent='🔓 재개'; tb.className='btn-sm btn-outline'; tb.dataset.mode='reopen';
+  } else {
+    tb.textContent='🔒 마감'; tb.className='btn-sm'; tb.dataset.mode='close';
+  }
+
+  document.getElementById('dSchool').textContent = s.학교명||'';
+  document.getElementById('dTrainingName').textContent = s.연수명||'';
+  document.getElementById('dDateTime').innerHTML = s.일시?'🕒 '+escapeHtml(s.일시):'';
+  document.getElementById('dTarget').innerHTML = s.대상?'👥 '+escapeHtml(s.대상):'';
+  document.getElementById('printLink').href = 'print_new.html?id='+id;
+
+  document.getElementById('qrcode').innerHTML='';
+  new QRCode(document.getElementById('qrcode'),{
+    text: new URL('sign_new.html?id='+id, location.href).href,
+    width:220, height:220, colorDark:'#0d3b66', colorLight:'#ffffff'
+  });
+
+  // 실시간 서명 구독
+  if(detailUnsub) detailUnsub();
+  detailUnsub = onSnapshot(collection(db,'sessions',id,'signatures'), sigSnap=>{
+    // 명단외 추가 서명자도 전체 인원에 포함
+    let extraCount = 0;
+    sigSnap.forEach(d=>{ if(d.data().추가여부) extraCount++; });
+    const displayTotal = detailTotal + extraCount;
+    document.getElementById('countText').textContent = sigSnap.size+' / '+displayTotal+'명 서명 완료';
+    renderSigList(sigSnap, id);
+  });
+
+  document.getElementById('btnEditFromDetail').dataset.id = id;
+}
+
+function renderSigList(sigSnap, sessionId){
+  const el = document.getElementById('sigManageList');
+  if(sigSnap.size===0){ el.innerHTML='<div class="sig-empty">아직 서명한 사람이 없습니다.</div>'; return; }
+  const items=[]; sigSnap.forEach(d=>items.push({docId:d.id,...d.data()}));
+  el.innerHTML = items.map(item=>`
+    <div class="sig-manage-item">
+      <span class="si-info">
+        ${escapeHtml(item.이름)}
+        ${item.학반?`<small>${escapeHtml(item.학반)}</small>`:''}
+        ${item.추가여부?'<span class="si-added">명단외</span>':''}
+      </span>
+      <button class="del-btn" data-docid="${item.docId}">🗑 삭제</button>
+    </div>`).join('');
+  el.querySelectorAll('.del-btn').forEach(btn=>{
+    btn.addEventListener('click', async()=>{
+      const name = btn.closest('.sig-manage-item').querySelector('.si-info').childNodes[0].textContent.trim();
+      if(!confirm(`"${name}"의 서명을 삭제할까요?`)) return;
+      btn.disabled=true; btn.textContent='삭제 중...';
+      try{ await deleteDoc(doc(db,'sessions',sessionId,'signatures',btn.dataset.docid)); }
+      catch(e){ alert('오류: '+e.message); btn.disabled=false; btn.textContent='🗑 삭제'; }
+    });
+  });
+}
+
+/* ──────────────────── 폼 (생성/수정) ──────────────────── */
+function showFormCreate(){
+  editingId=null;
+  document.getElementById('formTitle').textContent='새 연수 만들기';
+  ['f_school','f_training','f_date','f_target','f_topic','f_roster'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('formErr').style.display='none';
+  showView('Form');
+}
+
+async function showFormEdit(id){
+  editingId=id;
+  document.getElementById('formTitle').textContent='연수 정보 수정';
+  const snap=await getDoc(doc(db,'sessions',id));
+  if(!snap.exists()) return;
+  const s=snap.data();
+  document.getElementById('f_school').value = s.학교명||'';
+  document.getElementById('f_training').value = s.연수명||'';
+  document.getElementById('f_date').value = s.일시||'';
+  document.getElementById('f_target').value = s.대상||'';
+  document.getElementById('f_topic').value = s.주제||'';
+  document.getElementById('f_roster').value = rosterToText(s.명단);
+  document.getElementById('formErr').style.display='none';
+  showView('Form');
+}
+
+async function saveSession(){
+  const errEl=document.getElementById('formErr');
+  errEl.style.display='none';
+  const 학교명=document.getElementById('f_school').value.trim();
+  const 연수명=document.getElementById('f_training').value.trim();
+  const 일시=document.getElementById('f_date').value.trim();
+  const 대상=document.getElementById('f_target').value.trim();
+  const 주제=document.getElementById('f_topic').value.trim();
+  const 명단=parseRoster(document.getElementById('f_roster').value);
+  if(!연수명){ errEl.textContent='연수명은 꼭 입력해 주세요.'; errEl.style.display='block'; return; }
+  if(!명단.length){ errEl.textContent='참가자 명단을 입력해 주세요.'; errEl.style.display='block'; return; }
+  const btn=document.getElementById('btnSave');
+  btn.disabled=true; btn.textContent='저장 중...';
+  try{
+    if(editingId){
+      await updateDoc(doc(db,'sessions',editingId),{학교명,연수명,일시,대상,주제,명단});
+    } else {
+      const ref=doc(collection(db,'sessions'));
+      await setDoc(ref,{학교명,연수명,일시,대상,주제,명단,상태:'진행중',생성시각:serverTimestamp()});
+    }
+    showDashboard();
+  }catch(e){
+    errEl.textContent='저장 오류: '+e.message; errEl.style.display='block';
+  } finally {
+    btn.disabled=false; btn.textContent='저장하기';
+  }
+}
+
+/* ──────────────────── 이벤트 바인딩 ──────────────────── */
+document.getElementById('btnNewSession').addEventListener('click', showFormCreate);
+document.getElementById('btnBackForm').addEventListener('click', showDashboard);
+document.getElementById('btnSave').addEventListener('click', saveSession);
+document.getElementById('btnBackDetail').addEventListener('click', showDashboard);
+document.getElementById('btnEditFromDetail').addEventListener('click', e=>{
+  const id = e.currentTarget.dataset.id;
+  if(id) showFormEdit(id);
+});
+document.getElementById('btnToggleClose').addEventListener('click', async e=>{
+  const btn=e.currentTarget;
+  if(btn.dataset.mode==='close') await doClose(detailId, btn);
+  else await doReopen(detailId, btn);
+  if(detailId) showDetail(detailId); // 상태 새로고침
+});
+document.getElementById('sigPanelToggle').addEventListener('click',()=>{
+  const body=document.getElementById('sigPanelBody');
+  const arrow=document.getElementById('sigPanelArrow');
+  const open=body.style.display==='none';
+  body.style.display=open?'block':'none';
+  arrow.textContent=open?'▲':'▼';
+});
+
+/* ──────────────────── 초기화 ──────────────────── */
+(async function init(){
+  const id=new URLSearchParams(location.search).get('id');
+  if(id){
+    const snap=await getDoc(doc(db,'sessions',id));
+    if(snap.exists()){ showDetail(id); return; }
+  }
+  showDashboard();
+})();
+</script>
+</body>
+</html>
