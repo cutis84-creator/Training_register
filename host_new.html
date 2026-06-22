@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>연수 등록부 - 호스트 화면</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+  :root{
+    --navy:#0d3b66;
+    --blue1:#1e6fd9;
+    --blue2:#5aa9f7;
+    --bg:#eef3f9;
+    --line:#d7e2ee;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    font-family:"Pretendard","Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+    background:var(--bg);
+    color:var(--navy);
+    min-height:100vh;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:24px;
+  }
+
+  /* ---------- 입력 폼 ---------- */
+  .form-card{
+    background:#fff;
+    border-radius:18px;
+    box-shadow:0 10px 30px rgba(13,59,102,0.12);
+    padding:36px 40px;
+    width:100%;
+    max-width:560px;
+  }
+  .form-card h1{
+    font-size:22px;
+    margin:0 0 4px;
+  }
+  .form-card p.sub{
+    margin:0 0 24px;
+    color:#5b7187;
+    font-size:14px;
+  }
+  label{
+    display:block;
+    font-size:13px;
+    font-weight:600;
+    color:#3a5a7a;
+    margin:16px 0 6px;
+  }
+  input[type=text], textarea{
+    width:100%;
+    padding:11px 13px;
+    border:1.5px solid var(--line);
+    border-radius:10px;
+    font-size:15px;
+    font-family:inherit;
+    background:#fafcff;
+  }
+  input[type=text]:focus, textarea:focus{
+    outline:none;
+    border-color:var(--blue1);
+    background:#fff;
+  }
+  textarea{
+    resize:vertical;
+    min-height:140px;
+    line-height:1.5;
+  }
+  .hint{
+    font-size:12px;
+    color:#8a9bb0;
+    margin-top:4px;
+  }
+  .row2{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:14px;
+  }
+  button.primary{
+    margin-top:28px;
+    width:100%;
+    padding:15px;
+    border:none;
+    border-radius:12px;
+    background:linear-gradient(135deg,var(--blue1),var(--navy));
+    color:#fff;
+    font-size:16px;
+    font-weight:700;
+    cursor:pointer;
+    transition:transform .12s ease, box-shadow .12s ease;
+  }
+  button.primary:hover{ transform:translateY(-1px); box-shadow:0 8px 18px rgba(30,111,217,.3); }
+  button.primary:disabled{ opacity:.5; cursor:not-allowed; transform:none; box-shadow:none; }
+  .err{ color:#d23; font-size:13px; margin-top:10px; display:none; }
+
+  /* ---------- 디스플레이 화면 ---------- */
+  .display{
+    display:none;
+    width:100%;
+    max-width:900px;
+    text-align:center;
+  }
+  .ribbon{
+    background:linear-gradient(100deg,var(--blue2),var(--blue1) 55%,var(--navy));
+    color:#fff;
+    border-radius:18px 18px 0 0;
+    padding:22px 30px 26px;
+  }
+  .ribbon .school{ font-size:15px; opacity:.85; letter-spacing:.5px; margin-bottom:6px;}
+  .ribbon .title{ font-size:30px; font-weight:800; letter-spacing:2px;}
+  .display-body{
+    background:#fff;
+    border-radius:0 0 18px 18px;
+    box-shadow:0 16px 40px rgba(13,59,102,0.15);
+    padding:34px;
+  }
+  .meta{
+    display:flex;
+    justify-content:center;
+    gap:28px;
+    flex-wrap:wrap;
+    color:#3a5a7a;
+    font-size:14px;
+    margin-bottom:26px;
+  }
+  .meta b{ color:var(--navy); }
+  #qrcode{
+    display:inline-block;
+    padding:16px;
+    background:#fff;
+    border:1.5px solid var(--line);
+    border-radius:16px;
+  }
+  .scan-hint{
+    margin-top:14px;
+    font-size:15px;
+    color:#3a5a7a;
+  }
+  .counter{
+    margin-top:22px;
+    display:inline-flex;
+    align-items:center;
+    gap:10px;
+    background:var(--bg);
+    border-radius:999px;
+    padding:10px 22px;
+    font-size:16px;
+    font-weight:700;
+    color:var(--navy);
+  }
+  .counter .dot{
+    width:9px;height:9px;border-radius:50%;
+    background:#2ecc71;
+    animation:pulse 1.4s infinite;
+  }
+  @keyframes pulse{ 0%{opacity:1;} 50%{opacity:.3;} 100%{opacity:1;} }
+  .links{
+    margin-top:26px;
+    display:flex;
+    justify-content:center;
+    gap:14px;
+    flex-wrap:wrap;
+  }
+  .links a{
+    font-size:13px;
+    color:#3a5a7a;
+    text-decoration:none;
+    border:1.5px solid var(--line);
+    padding:8px 16px;
+    border-radius:999px;
+  }
+  .links a:hover{ background:var(--bg); }
+</style>
+</head>
+<body>
+
+  <!-- 1) 등록부 만들기 입력 화면 -->
+  <div class="form-card" id="formCard">
+    <h1>새 연수 등록부 만들기</h1>
+    <p class="sub">정보를 입력하면 QR코드가 있는 안내 화면이 생성됩니다.</p>
+
+    <label>학교명</label>
+    <input type="text" id="schoolName" placeholder="예: 포항해맞이초등학교">
+
+    <label>연수명</label>
+    <input type="text" id="trainingName" placeholder="예: 2026학년도 교육활동 보호 연수">
+
+    <div class="row2">
+      <div>
+        <label>일시</label>
+        <input type="text" id="dateTime" placeholder="예: 5.20.(수) 14:00~">
+      </div>
+      <div>
+        <label>대상</label>
+        <input type="text" id="target" placeholder="예: 2026학년도 본교 교원">
+      </div>
+    </div>
+
+    <label>주제 (선택)</label>
+    <input type="text" id="topic" placeholder="예: 2026학년도 교육활동 보호 연수">
+
+    <label>참가자 명단</label>
+    <textarea id="roster" placeholder="학반,이름 형식으로 한 줄에 한 명씩 입력 (엑셀에서 두 칸을 복사해 붙여넣어도 됩니다)
+예)
+교장,김00
+교감,이00
+1-1,박00"></textarea>
+    <div class="hint">엑셀에서 학반·이름 두 칸을 선택해 복사한 뒤 그대로 붙여넣으면 자동 인식됩니다.</div>
+
+    <div class="err" id="errMsg"></div>
+    <button class="primary" id="createBtn">등록부 생성하기</button>
+  </div>
+
+  <!-- 2) QR + 실시간 현황 디스플레이 화면 -->
+  <div class="display" id="displayCard">
+    <div class="ribbon">
+      <div class="school" id="dSchool"></div>
+      <div class="title">등 록 부</div>
+    </div>
+    <div class="display-body">
+      <div id="dTrainingName" style="font-size:20px;font-weight:700;margin-bottom:10px;"></div>
+      <div class="meta">
+        <span id="dDateTime"></span>
+        <span id="dTarget"></span>
+      </div>
+      <div id="qrcode"></div>
+      <div class="scan-hint">핸드폰 카메라로 QR코드를 스캔해 서명해 주세요</div>
+      <div class="counter"><span class="dot"></span><span id="countText">0 / 0명 서명 완료</span></div>
+      <div class="links">
+        <a id="printLink" href="#" target="_blank">🖨 인쇄용 화면 열기</a>
+        <a href="#" id="newSessionLink">＋ 새 등록부 만들기</a>
+      </div>
+    </div>
+  </div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-app.js";
+import {
+  getFirestore, doc, setDoc, getDoc, collection, onSnapshot, serverTimestamp
+} from "https://www.gstatic.com/firebasejs/12.11.0/firebase-firestore.js";
+
+// ====== 이 부분을 Firebase 콘솔의 firebaseConfig 값으로 바꿔주세요 (sign.html, print.html과 동일하게) ======
+const firebaseConfig = {
+  apiKey: "AIzaSyAv8dMh5Gw9Ykm70gMs-zLeKw6fyVe2wG8",
+  authDomain: "training-register-9d2d9.firebaseapp.com",
+  projectId: "training-register-9d2d9",
+  storageBucket: "training-register-9d2d9.firebasestorage.app",
+  messagingSenderId: "463058562917",
+  appId: "1:463058562917:web:0915d20876b504dc037b8c"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+function parseRoster(text){
+  return text.split('\n').map(line=>line.trim()).filter(Boolean).map(line=>{
+    // 쉼표 또는 탭으로 구분 (엑셀 붙여넣기 대응)
+    const parts = line.includes('\t') ? line.split('\t') : line.split(',');
+    return { 학반: (parts[0]||'').trim(), 이름: (parts[1]||'').trim() };
+  }).filter(p=>p.이름);
+}
+
+async function createSession(){
+  const errEl = document.getElementById('errMsg');
+  errEl.style.display='none';
+
+  const 학교명 = document.getElementById('schoolName').value.trim();
+  const 연수명 = document.getElementById('trainingName').value.trim();
+  const 일시 = document.getElementById('dateTime').value.trim();
+  const 대상 = document.getElementById('target').value.trim();
+  const 주제 = document.getElementById('topic').value.trim();
+  const 명단 = parseRoster(document.getElementById('roster').value);
+
+  if(!연수명 || 명단.length===0){
+    errEl.textContent = '연수명과 참가자 명단은 꼭 입력해 주세요.';
+    errEl.style.display='block';
+    return;
+  }
+  if(firebaseConfig.apiKey.indexOf('여기에')===0){
+    errEl.textContent = '먼저 코드 안의 firebaseConfig를 Firebase 콘솔 값으로 바꿔주세요.';
+    errEl.style.display='block';
+    return;
+  }
+
+  const btn = document.getElementById('createBtn');
+  btn.disabled = true; btn.textContent = '생성 중...';
+
+  try{
+    const sessionRef = doc(collection(db, 'sessions'));
+    await setDoc(sessionRef, { 학교명, 연수명, 일시, 대상, 주제, 명단, 생성시각: serverTimestamp() });
+    showDisplay({ id: sessionRef.id, 학교명, 연수명, 일시, 대상, 주제, 명단 });
+  }catch(err){
+    errEl.textContent = '오류가 발생했어요: ' + err.message;
+    errEl.style.display='block';
+    btn.disabled=false; btn.textContent='등록부 생성하기';
+  }
+}
+
+let unsubscribeCount = null;
+
+function showDisplay(s){
+  document.getElementById('formCard').style.display='none';
+  document.getElementById('displayCard').style.display='block';
+
+  document.getElementById('dSchool').textContent = s.학교명 || '';
+  document.getElementById('dTrainingName').textContent = s.연수명 || '';
+  document.getElementById('dDateTime').innerHTML = s.일시 ? ('🕒 ' + s.일시) : '';
+  document.getElementById('dTarget').innerHTML = s.대상 ? ('👥 ' + s.대상) : '';
+
+  const signUrl = new URL('sign.html?id=' + s.id, location.href).href;
+  document.getElementById('qrcode').innerHTML='';
+  new QRCode(document.getElementById('qrcode'), {
+    text: signUrl, width:220, height:220,
+    colorDark:'#0d3b66', colorLight:'#ffffff'
+  });
+
+  const printUrl = new URL('print.html?id=' + s.id, location.href).href;
+  document.getElementById('printLink').href = printUrl;
+
+  watchCount(s.id, s.명단.length);
+}
+
+// Apps Script 때는 5초마다 다시 물어봤지만(polling), Firestore에서는
+// onSnapshot으로 "구독"해두면 누가 서명하는 순간 바로 화면이 갱신됩니다.
+function watchCount(id, total){
+  if(unsubscribeCount) unsubscribeCount();
+  const sigCol = collection(db, 'sessions', id, 'signatures');
+  unsubscribeCount = onSnapshot(sigCol, snap=>{
+    document.getElementById('countText').textContent = snap.size + ' / ' + total + '명 서명 완료';
+  });
+}
+
+document.getElementById('createBtn').addEventListener('click', createSession);
+document.getElementById('newSessionLink').addEventListener('click', (e)=>{
+  e.preventDefault();
+  location.reload();
+});
+
+// 페이지에 ?id= 가 이미 있으면 (새로고침 등) 바로 디스플레이 화면으로
+(async function init(){
+  const params = new URLSearchParams(location.search);
+  const id = params.get('id');
+  if(id && firebaseConfig.apiKey.indexOf('여기에')!==0){
+    const snap = await getDoc(doc(db, 'sessions', id));
+    if(snap.exists()){
+      showDisplay({ id, ...snap.data() });
+    }
+  }
+})();
+</script>
+</body>
+</html>

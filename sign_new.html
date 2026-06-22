@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>연수 등록부 서명</title>
+<style>
+  :root{
+    --navy:#0d3b66;
+    --blue1:#1e6fd9;
+    --blue2:#5aa9f7;
+    --bg:#eef3f9;
+    --line:#d7e2ee;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  body{
+    margin:0;
+    font-family:"Pretendard","Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+    background:var(--bg);
+    color:var(--navy);
+    min-height:100vh;
+  }
+  .ribbon{
+    background:linear-gradient(100deg,var(--blue2),var(--blue1) 55%,var(--navy));
+    color:#fff;
+    padding:18px 20px 20px;
+    text-align:center;
+  }
+  .ribbon .school{ font-size:13px; opacity:.85; }
+  .ribbon .training{ font-size:18px; font-weight:800; margin-top:4px; }
+  .wrap{ padding:18px; max-width:480px; margin:0 auto; padding-bottom:60px; }
+
+  /* 단계 공통 */
+  .card{
+    background:#fff;
+    border-radius:16px;
+    padding:18px;
+    box-shadow:0 6px 18px rgba(13,59,102,.08);
+    margin-bottom:16px;
+  }
+  .step-title{ font-size:15px; font-weight:700; margin-bottom:10px; }
+
+  /* 1단계: 이름 검색 */
+  #searchBox{
+    width:100%; padding:13px 14px; font-size:16px;
+    border:1.5px solid var(--line); border-radius:12px;
+    background:#fafcff;
+  }
+  #searchBox:focus{ outline:none; border-color:var(--blue1); background:#fff; }
+  .name-list{ margin-top:12px; max-height:340px; overflow-y:auto; }
+  .name-item{
+    display:flex; justify-content:space-between; align-items:center;
+    padding:12px 14px; border-radius:10px; margin-bottom:6px;
+    background:#f6f9fc; cursor:pointer; font-size:15px;
+  }
+  .name-item:active{ background:#e3ecf7; }
+  .name-item .cls{ color:#7d8fa3; font-size:12.5px; margin-right:8px; }
+  .name-item.signed{ opacity:.45; cursor:not-allowed; }
+  .name-item.signed:active{ background:#f6f9fc; }
+  .tag-done{
+    font-size:11.5px; background:#cfe8d8; color:#1d7a4a;
+    padding:2px 8px; border-radius:999px;
+  }
+  .empty-hint{ text-align:center; color:#93a3b5; font-size:13.5px; padding:18px 0; }
+  .spinner{
+    display:inline-block; width:14px; height:14px;
+    border:2px solid #c8d6e5; border-top-color:var(--blue1);
+    border-radius:50%; vertical-align:middle; margin-right:7px;
+    animation:spin .7s linear infinite;
+  }
+  @keyframes spin{ to{ transform:rotate(360deg); } }
+
+  .add-btn{
+    margin-top:10px; width:100%; padding:12px; text-align:center;
+    border:1.5px dashed #b9c8d8; border-radius:12px; color:#5b7187;
+    font-size:14px; cursor:pointer; background:#fff;
+  }
+
+  /* 명단에 없을 때 직접 입력 */
+  .manual-row{ display:grid; grid-template-columns:1fr; gap:10px; margin-top:4px; }
+  .manual-row input{
+    padding:12px; border:1.5px solid var(--line); border-radius:10px; font-size:15px; background:#fafcff;
+  }
+
+  /* 2단계: 선택된 사람 + 서명 */
+  .selected-box{
+    display:flex; justify-content:space-between; align-items:center;
+    background:var(--bg); border-radius:12px; padding:14px 16px; margin-bottom:14px;
+  }
+  .selected-box .who b{ font-size:17px; }
+  .selected-box .who span{ font-size:12.5px; color:#5b7187; display:block; margin-top:2px;}
+  .change-btn{ font-size:12.5px; color:var(--blue1); background:none; border:none; cursor:pointer; }
+
+  canvas{
+    width:100%; height:220px; display:block;
+    background:#fff; border:1.5px dashed #b9c8d8; border-radius:12px; touch-action:none;
+  }
+  .pad-actions{ display:flex; gap:10px; margin-top:10px; }
+  .pad-actions button{
+    flex:1; padding:11px; border-radius:10px; font-size:14px; border:1.5px solid var(--line);
+    background:#fff; color:#3a5a7a; cursor:pointer;
+  }
+  .submit-btn{
+    margin-top:16px; width:100%; padding:15px; border:none; border-radius:12px;
+    background:linear-gradient(135deg,var(--blue1),var(--navy)); color:#fff;
+    font-size:16px; font-weight:700; cursor:pointer;
+  }
+  .submit-btn:disabled{ opacity:.5; }
+
+  /* 완료 화면 */
+  .done{ text-align:center; padding:50px 20px; }
+  .done .mark{ font-size:54px; }
+  .done h2{ margin:14px 0 6px; }
+  .done p{ color:#5b7187; font-size:14px; }
+
+  .err{ color:#d23; font-size:13px; margin-top:8px; }
+  .hidden{ display:none !important; }
+</style>
+</head>
+<body>
+
+<div class="ribbon">
+  <div class="school" id="hSchool"></div>
+  <div class="training" id="hTraining">불러오는 중...</div>
+</div>
+
+<div class="wrap">
+
+  <!-- 1단계: 이름 검색/선택 -->
+  <div id="step1" class="card">
+    <div class="step-title">① 본인 이름을 찾아 선택해 주세요</div>
+    <input type="text" id="searchBox" placeholder="이름을 입력해 검색">
+    <div class="name-list" id="nameList"></div>
+    <div class="add-btn" id="showManualBtn">명단에 없어요 (직접 입력)</div>
+
+    <div id="manualBox" class="hidden" style="margin-top:12px;">
+      <div class="manual-row">
+        <input type="text" id="manualClass" placeholder="학반 (예: 1-1, 영양)">
+        <input type="text" id="manualName" placeholder="이름">
+      </div>
+      <div class="add-btn" id="confirmManualBtn" style="border-style:solid;color:#fff;background:var(--blue1);border-color:var(--blue1);">이 정보로 선택</div>
+    </div>
+  </div>
+
+  <!-- 2단계: 서명 -->
+  <div id="step2" class="card hidden">
+    <div class="step-title">② 서명해 주세요</div>
+    <div class="selected-box">
+      <div class="who">
+        <b id="selName"></b>
+        <span id="selClass"></span>
+      </div>
+      <button class="change-btn" id="changeBtn">다른 사람으로 변경</button>
+    </div>
+
+    <canvas id="padCanvas"></canvas>
+    <div class="pad-actions">
+      <button id="clearPadBtn">다시 쓰기</button>
+    </div>
+    <button class="submit-btn" id="submitBtn">서명 제출</button>
+    <div class="err hidden" id="submitErr"></div>
+  </div>
+
+  <!-- 완료 화면 -->
+  <div id="stepDone" class="done hidden">
+    <div class="mark">✅</div>
+    <h2>서명이 완료되었습니다</h2>
+    <p id="doneWho"></p>
+    <button class="submit-btn" id="signAnotherBtn" style="margin-top:24px;">＋ 다른 사람 서명하기</button>
+  </div>
+
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-app.js";
+import {
+  getFirestore, doc, getDoc, collection, addDoc, onSnapshot, serverTimestamp
+} from "https://www.gstatic.com/firebasejs/12.11.0/firebase-firestore.js";
+
+// ====== 이 부분을 Firebase 콘솔의 firebaseConfig 값으로 바꿔주세요 (host.html, print.html과 동일하게) ======
+const firebaseConfig = {
+  apiKey: "AIzaSyAv8dMh5Gw9Ykm70gMs-zLeKw6fyVe2wG8",
+  authDomain: "training-register-9d2d9.firebaseapp.com",
+  projectId: "training-register-9d2d9",
+  storageBucket: "training-register-9d2d9.firebasestorage.app",
+  messagingSenderId: "463058562917",
+  appId: "1:463058562917:web:0915d20876b504dc037b8c"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+const params = new URLSearchParams(location.search);
+const SESSION_ID = params.get('id');
+
+let session = null;
+let selected = null; // {학반, 이름, 추가여부}
+let signedKeys = new Set();
+let currentKeyword = '';
+
+function escapeHtml(s){
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+async function loadSession(){
+  if(!SESSION_ID || firebaseConfig.apiKey.indexOf('여기에')===0){
+    document.getElementById('nameList').innerHTML = '<div class="empty-hint">등록부 정보를 불러올 수 없습니다.<br>QR코드를 다시 스캔해 주세요.</div>';
+    return;
+  }
+  document.getElementById('nameList').innerHTML = '<div class="empty-hint"><span class="spinner"></span>명단을 불러오는 중이에요...</div>';
+
+  try{
+    const snap = await getDoc(doc(db, 'sessions', SESSION_ID));
+    if(!snap.exists()){
+      document.getElementById('nameList').innerHTML = '<div class="empty-hint">등록부를 찾을 수 없습니다.</div>';
+      return;
+    }
+    session = snap.data();
+  }catch(err){
+    document.getElementById('nameList').innerHTML = '<div class="empty-hint">불러오기 오류: '+escapeHtml(err.message)+'</div>';
+    return;
+  }
+
+  document.getElementById('hSchool').textContent = session.학교명 || '';
+  document.getElementById('hTraining').textContent = session.연수명 || '';
+
+  // 서명 현황을 실시간 구독 — 누군가 서명을 마치는 즉시 이 화면에도 "서명완료" 표시가 반영됨
+  onSnapshot(collection(db, 'sessions', SESSION_ID, 'signatures'), snap=>{
+    signedKeys = new Set();
+    snap.forEach(d=>{
+      const v = d.data();
+      signedKeys.add((v.학반||'') + '|' + (v.이름||''));
+    });
+    renderList(currentKeyword);
+  });
+}
+
+function isSigned(p){
+  return signedKeys.has((p.학반||'') + '|' + p.이름);
+}
+
+function renderList(keyword){
+  const listEl = document.getElementById('nameList');
+  const kw = (keyword||'').trim();
+  const filtered = session.명단.filter(p => !kw || p.이름.includes(kw) || (p.학반||'').includes(kw));
+  if(filtered.length===0){
+    listEl.innerHTML = '<div class="empty-hint">검색 결과가 없어요. 명단에 없다면 아래 버튼을 눌러주세요.</div>';
+    return;
+  }
+  listEl.innerHTML = filtered.map(p=>{
+    const signed = isSigned(p);
+    return `<div class="name-item ${signed?'signed':''}" data-cls="${escapeHtml(p.학반||'')}" data-name="${escapeHtml(p.이름)}">
+      <span><span class="cls">${escapeHtml(p.학반||'')}</span>${escapeHtml(p.이름)}</span>
+      ${signed?'<span class="tag-done">서명완료</span>':''}
+    </div>`;
+  }).join('');
+}
+
+document.getElementById('searchBox').addEventListener('input', e=>{
+  currentKeyword = e.target.value;
+  if(session) renderList(currentKeyword);
+});
+
+// 이름 목록은 매번 새로 그려지므로, onclick을 각 항목에 박아두는 대신
+// 부모 요소(nameList)에 클릭 이벤트를 하나만 걸어두고 어떤 항목이 눌렸는지 판별 (모바일에서 더 안정적)
+document.getElementById('nameList').addEventListener('click', e=>{
+  const item = e.target.closest('.name-item');
+  if(!item || item.classList.contains('signed')) return;
+  selectPerson(item.dataset.cls, item.dataset.name, false);
+});
+
+document.getElementById('showManualBtn').addEventListener('click', ()=> toggleManual(true));
+
+function toggleManual(show){
+  document.getElementById('manualBox').classList.toggle('hidden', !show);
+}
+
+document.getElementById('confirmManualBtn').addEventListener('click', confirmManual);
+
+function confirmManual(){
+  const cls = document.getElementById('manualClass').value.trim();
+  const name = document.getElementById('manualName').value.trim();
+  if(!name){ alert('이름을 입력해 주세요.'); return; }
+  selectPerson(cls, name, true);
+}
+
+function selectPerson(학반, 이름, 추가여부){
+  selected = { 학반, 이름, 추가여부 };
+  document.getElementById('selName').textContent = 이름;
+  document.getElementById('selClass').textContent = 학반 ? ('학반: ' + 학반) : '';
+  document.getElementById('step1').classList.add('hidden');
+  document.getElementById('step2').classList.remove('hidden');
+  setupPad();
+}
+
+document.getElementById('changeBtn').addEventListener('click', backToStep1);
+
+function backToStep1(){
+  document.getElementById('step2').classList.add('hidden');
+  document.getElementById('step1').classList.remove('hidden');
+  selected = null;
+}
+
+/* ---------- 서명 패드 ---------- */
+let canvas, ctx, drawing=false, hasDrawn=false;
+
+function setupPad(){
+  canvas = document.getElementById('padCanvas');
+  const ratio = window.devicePixelRatio || 1;
+  const rect = canvas.getBoundingClientRect();
+  canvas.width = rect.width * ratio;
+  canvas.height = rect.height * ratio;
+  ctx = canvas.getContext('2d');
+  ctx.scale(ratio, ratio);
+  ctx.lineWidth = 2.4;
+  ctx.lineCap = 'round';
+  ctx.strokeStyle = '#0d3b66';
+  hasDrawn = false;
+
+  const pos = (e)=>{
+    const r = canvas.getBoundingClientRect();
+    const t = e.touches ? e.touches[0] : e;
+    return { x: t.clientX - r.left, y: t.clientY - r.top };
+  };
+  const start = (e)=>{ e.preventDefault(); drawing=true; const p=pos(e); ctx.beginPath(); ctx.moveTo(p.x,p.y); };
+  const move = (e)=>{ if(!drawing) return; e.preventDefault(); const p=pos(e); ctx.lineTo(p.x,p.y); ctx.stroke(); hasDrawn=true; };
+  const end = ()=>{ drawing=false; };
+
+  canvas.onmousedown = start; canvas.onmousemove = move; canvas.onmouseup = end; canvas.onmouseleave = end;
+  canvas.ontouchstart = start; canvas.ontouchmove = move; canvas.ontouchend = end;
+}
+
+document.getElementById('clearPadBtn').addEventListener('click', clearPad);
+
+function clearPad(){
+  const rect = canvas.getBoundingClientRect();
+  ctx.clearRect(0,0,rect.width,rect.height);
+  hasDrawn = false;
+}
+
+document.getElementById('submitBtn').addEventListener('click', submitSign);
+
+async function submitSign(){
+  const errEl = document.getElementById('submitErr');
+  errEl.classList.add('hidden');
+
+  if(!hasDrawn){
+    errEl.textContent = '서명을 먼저 그려주세요.';
+    errEl.classList.remove('hidden');
+    return;
+  }
+  const btn = document.getElementById('submitBtn');
+  btn.disabled = true; btn.textContent = '제출 중...';
+
+  // 서명 이미지를 base64로 바로 Firestore 문서에 저장
+  // (Firebase Storage는 Spark 무료 플랜에서 카드 등록이 필요하므로, 서명처럼 작은 그림은 여기에 직접 넣는 것이 훨씬 편함)
+  const 서명base64 = canvas.toDataURL('image/png');
+  try{
+    await addDoc(collection(db, 'sessions', SESSION_ID, 'signatures'), {
+      학반: selected.학반,
+      이름: selected.이름,
+      추가여부: selected.추가여부,
+      서명base64,
+      제출시각: serverTimestamp()
+    });
+
+    document.getElementById('doneWho').textContent = (selected.학반?selected.학반+' / ':'') + selected.이름 + '님, 서명이 정상적으로 기록되었습니다.';
+    document.getElementById('step2').classList.add('hidden');
+    document.getElementById('stepDone').classList.remove('hidden');
+  }catch(err){
+    errEl.textContent = '제출 중 오류: ' + err.message;
+    errEl.classList.remove('hidden');
+    btn.disabled = false; btn.textContent = '서명 제출';
+  }
+}
+
+document.getElementById('signAnotherBtn').addEventListener('click', signAnother);
+
+function signAnother(){
+  selected = null;
+  hasDrawn = false;
+  document.getElementById('searchBox').value = '';
+  currentKeyword = '';
+  document.getElementById('manualClass').value = '';
+  document.getElementById('manualName').value = '';
+  toggleManual(false);
+
+  document.getElementById('stepDone').classList.add('hidden');
+  document.getElementById('step1').classList.remove('hidden');
+
+  const btn = document.getElementById('submitBtn');
+  btn.disabled = false; btn.textContent = '서명 제출';
+  document.getElementById('submitErr').classList.add('hidden');
+
+  // 실시간 구독 덕분에 방금 한 서명도 이미 signedKeys에 반영되어 있음 — 그냥 다시 그리기만 하면 됨
+  renderList('');
+}
+
+loadSession();
+</script>
+</body>
+</html>
